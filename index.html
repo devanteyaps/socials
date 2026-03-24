@@ -439,60 +439,6 @@
       flex: none;
     }
 
-    .controls {
-      margin-top: 16px;
-      display: flex;
-      justify-content: center;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-
-    .volume-wrap {
-      width: min(320px, 78vw);
-      border: 1px solid rgba(255, 255, 255, 0.18);
-      border-radius: 999px;
-      background: rgba(0, 0, 0, 0.35);
-      padding: 8px 12px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      backdrop-filter: blur(4px);
-    }
-
-    .volume-wrap i {
-      color: rgba(255, 255, 255, 0.9);
-      font-size: 13px;
-    }
-
-    .volume-wrap input[type="range"] {
-      width: 100%;
-      appearance: none;
-      height: 5px;
-      border-radius: 999px;
-      background: linear-gradient(90deg, var(--cyan), var(--magenta));
-      outline: none;
-      cursor: pointer;
-    }
-
-    .volume-wrap input[type="range"]::-webkit-slider-thumb {
-      appearance: none;
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
-      background: #fff;
-      border: 2px solid #0b0b10;
-      box-shadow: 0 0 10px rgba(56, 233, 255, 0.35);
-    }
-
-    .volume-wrap input[type="range"]::-moz-range-thumb {
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
-      background: #fff;
-      border: 2px solid #0b0b10;
-      box-shadow: 0 0 10px rgba(56, 233, 255, 0.35);
-    }
-
     /* Promo modal overlay (must be present or open has no visible effect) */
     .promo-root {
       position: fixed;
@@ -862,20 +808,8 @@
           <span class="arrow"><i class="fa-solid fa-chevron-right"></i></span>
         </button>
       </div>
-
-      <div class="controls">
-        <div class="volume-wrap">
-          <i class="fa-solid fa-volume-low"></i>
-          <input id="volume-slider" type="range" min="0" max="100" value="70" aria-label="Audio volume" />
-          <i class="fa-solid fa-volume-high"></i>
-        </div>
-      </div>
     </section>
   </main>
-
-  <audio id="bg-audio" preload="auto" playsinline loop>
-    Your browser does not support the audio element.
-  </audio>
 
   <div class="promo-root" id="promo-root" aria-hidden="true">
     <div class="promo-backdrop" id="promo-backdrop" tabindex="-1"></div>
@@ -900,86 +834,6 @@
       setTimeout(function() {
         pre.classList.add("fade");
       }, 2100);
-    })();
-
-    /* Background audio — same user-gesture-first pattern */
-    (function audioPlayer() {
-      const audio = document.getElementById("bg-audio");
-      const slider = document.getElementById("volume-slider");
-      const preloaderEl = document.getElementById("preloader");
-      const shellEl = document.querySelector(".shell");
-      if (!audio || !slider) return;
-
-      const CANDIDATES = [{ url: "", type: "audio/mpeg" }];
-      audio.loop = true;
-      audio.preload = "auto";
-      audio.playsInline = true;
-      audio.setAttribute("playsinline", "");
-      audio.setAttribute("webkit-playsinline", "");
-      audio.volume = (Number(slider.value) || 70) / 100;
-      audio.muted = false;
-
-      function mimeSupported(mime) {
-        try {
-          const r = audio.canPlayType(mime);
-          return r === "probably" || r === "maybe";
-        } catch (_) {
-          return false;
-        }
-      }
-
-      function setSource(url) {
-        try {
-          Array.from(audio.querySelectorAll("source")).forEach(function(s) {
-            s.remove();
-          });
-        } catch (_) {}
-        audio.src = url;
-      }
-
-      function chooseSource() {
-        const usable = CANDIDATES.find(function(c) {
-          return !c.type || mimeSupported(c.type);
-        });
-        if (!usable && mimeSupported("audio/mpeg")) {
-          setSource("1.mp3");
-          return true;
-        }
-        if (!usable) return false;
-        setSource(usable.url);
-        return true;
-      }
-
-      // Pre-bind source early so mobile has media ready before first gesture.
-      if (chooseSource()) {
-        try { audio.load(); } catch (_) {}
-      }
-
-      let unlocked = false;
-      function unlockAndPlay() {
-        if (unlocked) return;
-        unlocked = true;
-        audio.muted = false;
-        const playPromise = audio.play();
-        if (playPromise && typeof playPromise.catch === "function") {
-          playPromise.catch(function() {
-            // If first gesture was too early/blocked, allow next gesture retry.
-            unlocked = false;
-          });
-        }
-      }
-
-      const unlockTargets = [window, document, preloaderEl, shellEl].filter(Boolean);
-      unlockTargets.forEach(function(t) {
-        ["pointerdown", "touchend", "click", "keydown"].forEach(function(ev) {
-          t.addEventListener(ev, unlockAndPlay, { once: true });
-        });
-      });
-
-      slider.addEventListener("input", function() {
-        const v = Math.max(0, Math.min(100, Number(slider.value) || 0)) / 100;
-        audio.volume = v;
-      });
     })();
 
     (function promoModal() {
