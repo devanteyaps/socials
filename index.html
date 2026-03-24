@@ -727,10 +727,15 @@
     (function audioPlayer() {
       const audio = document.getElementById("bg-audio");
       const slider = document.getElementById("volume-slider");
+      const preloaderEl = document.getElementById("preloader");
+      const shellEl = document.querySelector(".shell");
 
       const CANDIDATES = [{ url: "1.mp3", type: "audio/mpeg" }];
       audio.loop = true;
       audio.preload = "auto";
+      audio.playsInline = true;
+      audio.setAttribute("playsinline", "");
+      audio.setAttribute("webkit-playsinline", "");
       audio.volume = (Number(slider.value) || 70) / 100;
       audio.muted = false;
 
@@ -750,7 +755,6 @@
           });
         } catch (_) {}
         audio.src = url;
-        try { audio.load(); } catch (_) {}
       }
 
       function chooseSource() {
@@ -766,27 +770,32 @@
         return true;
       }
 
-      async function tryPlay() {
-        if (!chooseSource()) return false;
-        try {
-          audio.muted = false;
-          await audio.play();
-          return true;
-        } catch (_) {
-          return false;
-        }
+      // Pre-bind source early so mobile has media ready before first gesture.
+      if (chooseSource()) {
+        try { audio.load(); } catch (_) {}
       }
 
       let unlocked = false;
-      async function unlockAndPlay() {
+      function unlockAndPlay() {
         if (unlocked) return;
         unlocked = true;
-        await tryPlay();
+        audio.muted = false;
+        const playPromise = audio.play();
+        if (playPromise && typeof playPromise.catch === "function") {
+          playPromise.catch(function() {
+            // If first gesture was too early/blocked, allow next gesture retry.
+            unlocked = false;
+          });
+        }
       }
 
-      ["pointerdown", "touchstart", "keydown", "click"].forEach(function(ev) {
-        window.addEventListener(ev, unlockAndPlay, { once: true, passive: true });
+      const unlockTargets = [window, document, preloaderEl, shellEl].filter(Boolean);
+      unlockTargets.forEach(function(t) {
+        ["pointerdown", "touchend", "click", "keydown"].forEach(function(ev) {
+          t.addEventListener(ev, unlockAndPlay, { once: true });
+        });
       });
+
       slider.addEventListener("input", function() {
         const v = Math.max(0, Math.min(100, Number(slider.value) || 0)) / 100;
         audio.volume = v;
